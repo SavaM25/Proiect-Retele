@@ -17,8 +17,8 @@
 #include <arpa/inet.h>
 #include <sys/socket.h>
 
-#define SERVER_IP "127.0.0.1"
-#define SERVER_PORT 2908
+#define SERVER_IP "127.10.100.30"
+#define SERVER_PORT 2505
 
 int readExact(int socket, void *buffer, int size) {
     int total = 0;
