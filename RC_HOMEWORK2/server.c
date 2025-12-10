@@ -19,6 +19,83 @@ typedef struct
 } ThreadData;
 
 void *clientThread(void *arg)
+
+void handleClient(ThreadData *td)
+
+int readExact(int socket, void *buffer, int size)
+int writeExact(int socket, const void *buffer, int size)
+
+
+int main()
+{
+    int serverSocket;
+    struct sockaddr_in serverAddr, clientAddr;
+    socklen_t clientLen = sizeof(clientAddr);
+
+    int threadCounter = 0;
+
+    //creare socket
+    serverSocket = socket(AF_INET, SOCK_STREAM, 0);
+    if (serverSocket < 0)
+    {
+        perror("socket()");
+        return errno;
+    }
+
+    int opt = 1;
+    setsockopt(serverSocket, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
+
+    //configurare struct server
+    memset(&serverAddr, 0, sizeof(serverAddr));
+    serverAddr.sin_family = AF_INET;
+    serverAddr.sin_addr.s_addr = htonl(INADDR_ANY);
+    serverAddr.sin_port = htons(PORT);
+
+    if (bind(serverSocket, (struct sockaddr *)&serverAddr, sizeof(serverAddr)) < 0)
+    {
+        perror("bind()");
+        return errno;
+    }
+
+    if (listen(serverSocket, 10) < 0)
+    {
+        perror("listen()");
+        return errno;
+    }
+
+    printf("[SERVER] Rulează pe portul %d...\n", PORT);
+
+    while (1)
+    {
+        int clientSocket = accept(serverSocket, (struct sockaddr *)&clientAddr, &clientLen);
+
+        if (clientSocket < 0)
+        {
+            perror("accept()");
+            continue;
+        }
+
+        pthread_mutex_lock(&clientCountLock);
+        nrClienti++;
+        printf("[SERVER] Client conectat. Clienți activi: %d\n", nrClienti);
+        pthread_mutex_unlock(&clientCountLock);
+
+        //creare structura thread
+        ThreadData *td = malloc(sizeof(ThreadData));
+        td->idThread = threadCounter++;
+        td->clientSocket = clientSocket;
+
+        //creare thread
+        pthread_t th;
+        pthread_create(&th, NULL, clientThread, td);
+        pthread_detach(th); // IMPORTANT!!!
+    }
+
+    return 0;
+}
+
+
+void *clientThread(void *arg)
 {
     ThreadData td = *((ThreadData *)arg);
     free(arg);
@@ -141,72 +218,4 @@ int writeExact(int socket, const void *buffer, int size)
         total += bytes;
     }
     return total;
-}
-
-int main()
-{
-    int serverSocket;
-    struct sockaddr_in serverAddr, clientAddr;
-    socklen_t clientLen = sizeof(clientAddr);
-
-    int threadCounter = 0;
-
-    //creare socket
-    serverSocket = socket(AF_INET, SOCK_STREAM, 0);
-    if (serverSocket < 0)
-    {
-        perror("socket()");
-        return errno;
-    }
-
-    int opt = 1;
-    setsockopt(serverSocket, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
-
-    //configurare struct server
-    memset(&serverAddr, 0, sizeof(serverAddr));
-    serverAddr.sin_family = AF_INET;
-    serverAddr.sin_addr.s_addr = htonl(INADDR_ANY);
-    serverAddr.sin_port = htons(PORT);
-
-    if (bind(serverSocket, (struct sockaddr *)&serverAddr, sizeof(serverAddr)) < 0)
-    {
-        perror("bind()");
-        return errno;
-    }
-
-    if (listen(serverSocket, 10) < 0)
-    {
-        perror("listen()");
-        return errno;
-    }
-
-    printf("[SERVER] Rulează pe portul %d...\n", PORT);
-
-    while (1)
-    {
-        int clientSocket = accept(serverSocket, (struct sockaddr *)&clientAddr, &clientLen);
-
-        if (clientSocket < 0)
-        {
-            perror("accept()");
-            continue;
-        }
-
-        pthread_mutex_lock(&clientCountLock);
-        nrClienti++;
-        printf("[SERVER] Client conectat. Clienți activi: %d\n", nrClienti);
-        pthread_mutex_unlock(&clientCountLock);
-
-        //creare structura thread
-        ThreadData *td = malloc(sizeof(ThreadData));
-        td->idThread = threadCounter++;
-        td->clientSocket = clientSocket;
-
-        //creare thread
-        pthread_t th;
-        pthread_create(&th, NULL, clientThread, td);
-        pthread_detach(th); // IMPORTANT!!!
-    }
-
-    return 0;
 }
