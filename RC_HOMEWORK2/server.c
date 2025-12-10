@@ -7,7 +7,7 @@
 #include <netinet/in.h>
 #include <sys/socket.h>
 
-#define PORT 2908
+#define PORT 2505
 
 int nrClienti = 0;
 pthread_mutex_t clientCountLock = PTHREAD_MUTEX_INITIALIZER;
